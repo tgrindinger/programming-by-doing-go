@@ -1,0 +1,2 @@
+some|guy|123 nowhere blvd|123-456-7890|someguy@domain.com
+other|dude|3216540987|321 somewhere dr, bigcity, ca 54321|otherdude@email.org
