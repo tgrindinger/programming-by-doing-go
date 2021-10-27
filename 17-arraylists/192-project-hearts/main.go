@@ -10,38 +10,28 @@ import (
 	"time"
 )
 
-func printTrick(writer io.Writer, game *Game) {
+func printTrick(writer io.Writer, match IMatch) {
 	fmt.Fprintln(writer, "Current trick:")
-	for _, card := range game.trick {
+	for _, card := range match.gameTrick() {
 		fmt.Fprintf(writer, "%s\n", card)
 	}
 	fmt.Fprintln(writer)
 }
 
-func printScores(writer io.Writer, game *Game) {
-	for i, s := range game.scores {
+func printScores(writer io.Writer, game IGame) {
+	for i, s := range game.gameScores() {
 		fmt.Fprintf(writer, "%d) %d\n", i, s)
 	}
 	fmt.Fprintln(writer)
 }
 
-func printWinner(writer io.Writer, game *Game) {
-	lowest := 0
-	for i, s := range game.scores {
-		if s < game.scores[lowest] {
-			lowest = i
-		}
-	}
-	fmt.Fprintf(writer, "Game over. Player %d wins!\n", lowest)
-}
-
-func readChoice(scanner *bufio.Scanner, writer io.Writer, game *Game) int {
+func readChoice(scanner *bufio.Scanner, writer io.Writer, match IMatch) int {
 	var choice int
-	for ok := true; ok; ok = !game.validPlay(choice - 1) {
+	for ok := true; ok; ok = !match.validPlay(choice - 1) {
 		fmt.Fprint(writer, "Discard which card: ")
 		scanner.Scan()
 		choice, _ = strconv.Atoi(scanner.Text())
-		if !game.validPlay(choice - 1) {
+		if !match.validPlay(choice - 1) {
 			fmt.Fprintln(writer, "You are unable to play that card.")
 			fmt.Fprintln(writer, "You may only play cards of the same suit that has already been played.")
 			fmt.Fprintln(writer, "If you have no matching cards, you may play any other card.")
@@ -52,29 +42,26 @@ func readChoice(scanner *bufio.Scanner, writer io.Writer, game *Game) int {
 	return choice - 1
 }
 
-func playTrick(scanner *bufio.Scanner, writer io.Writer, game *Game) {
-	for !game.matchOver() {
-		printTrick(writer, game)
-		fmt.Fprintf(writer, "Player %d, your move. Current score: %d (%d)\n", game.current, game.players[game.current].score(), game.scores[game.current])
-		fmt.Fprintln(writer, game.players[game.current].printHand())
-		choice := readChoice(scanner, writer, game)
-		game.playCard(choice)
-		if game.trickOver() {
-			fmt.Fprintf(writer, "Player %d wins the trick!\n", game.trickWinner())
-			game.collectTrick()
+func playTrick(scanner *bufio.Scanner, writer io.Writer, match IMatch) {
+	for !match.matchOver() {
+		printTrick(writer, match)
+		fmt.Fprintf(writer, "Player %d, your move. Current score: %d\n", match.currentPlayer().index, match.currentPlayer().currentScore())
+		fmt.Fprintln(writer, match.currentPlayer().printHand())
+		choice := readChoice(scanner, writer, match)
+		match.playCard(choice)
+		if match.trickOver() {
+			fmt.Fprintf(writer, "Player %d wins the trick!\n", match.trickWinner())
+			match.collectTrick()
 		}
 	}
 }
 
-func playMatch(scanner *bufio.Scanner, writer io.Writer, game *Game) {
+func playMatch(scanner *bufio.Scanner, writer io.Writer, match IMatch) {
 	fmt.Fprintln(writer, "Dealing cards...")
-	game.dealCards()
+	match.dealCards()
 	fmt.Fprintln(writer)
-	game.doFirstTurn()
-	playTrick(scanner, writer, game)
-	fmt.Fprintln(writer, "Match over. Scores:")
-	game.updateScores()
-	printScores(writer, game)
+	match.doFirstTurn()
+	playTrick(scanner, writer, match)
 }
 
 func playGame(random *rand.Rand, reader io.Reader, writer io.Writer) {
@@ -83,9 +70,12 @@ func playGame(random *rand.Rand, reader io.Reader, writer io.Writer) {
 	fmt.Fprintln(writer, "Let's play some Hearts!")
 	fmt.Fprintln(writer)
 	for !game.gameOver() {
-		playMatch(scanner, writer, game)
+		playMatch(scanner, writer, game.newMatch())
+		fmt.Fprintln(writer, "Match over. Scores:")
+		game.updateScores()
+		printScores(writer, game)
 	}
-	printWinner(writer, game)
+	fmt.Fprintf(writer, "Game over. Player %d wins!\n", game.gameWinner())
 }
 
 func main() {

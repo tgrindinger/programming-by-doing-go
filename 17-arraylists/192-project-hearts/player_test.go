@@ -44,7 +44,7 @@ func TestPlayerPrintHand(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			player := &Player{tc.hand, nil}
+			player := &Player{tc.hand, nil, 0, 0}
 			gots := strings.Split(player.printHand(), "\n")
 			assertGot(t, "", gots, tc.wants)
 		})
@@ -71,7 +71,7 @@ func TestPlayerPlayCard(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			player := &Player{tc.before, nil}
+			player := &Player{tc.before, nil, 0, 0}
 			card := player.playCard(tc.choice)
 			if card != tc.played {
 				t.Errorf("got %v want %v", card, tc.played)
@@ -106,7 +106,7 @@ func TestPlayerReceiveCard(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			player := &Player{tc.before, nil}
+			player := &Player{tc.before, nil, 0, 0}
 			player.receiveCard(tc.card)
 			if len(player.hand) != len(tc.after) {
 				t.Errorf("got %v want %v", player.hand, tc.after)
@@ -138,7 +138,7 @@ func TestPlayerReceiveTrick(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			player := &Player{nil, tc.before}
+			player := &Player{nil, tc.before, 0, 0}
 			player.receiveTrick(tc.trick)
 			if len(player.tricks) != len(tc.after) {
 				t.Errorf("got %v want %v", player.tricks, tc.after)
@@ -169,8 +169,8 @@ func TestPlayerScore(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			player := &Player{nil, tc.tricks}
-			got := player.score()
+			player := &Player{nil, tc.tricks, 0, 0}
+			got := player.currentScore()
 			if got != tc.want {
 				t.Errorf("got %d want %d", got, tc.want)
 			}
@@ -193,7 +193,7 @@ func TestPlayerHasNonHeartCards(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			player := &Player{tc.hand, nil}
+			player := &Player{tc.hand, nil, 0, 0}
 			got := player.hasNonHeartCards()
 			if got != tc.want {
 				t.Errorf("got %t want %t", got, tc.want)
@@ -217,7 +217,7 @@ func TestPlayerHasMatchingSuit(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			player := &Player{tc.hand, nil}
+			player := &Player{tc.hand, nil, 0, 0}
 			got := player.hasMatchingSuit(tc.suit)
 			if got != tc.want {
 				t.Errorf("got %t want %t", got, tc.want)

@@ -8,6 +8,12 @@ import (
 type Player struct {
 	hand   []*Card
 	tricks []*Card
+	index  int
+	score  int
+}
+
+func NewPlayer(index int) *Player {
+	return &Player{[]*Card{}, []*Card{}, index, 0}
 }
 
 func (p *Player) printHand() string {
@@ -36,12 +42,16 @@ func (p *Player) receiveTrick(trick []*Card) {
 	p.tricks = append(p.tricks, trick...)
 }
 
-func (p *Player) score() int {
+func (p *Player) currentScore() int {
 	score := 0
 	for _, c := range p.tricks {
 		score += c.score()
 	}
 	return score
+}
+
+func (p *Player) updateScore() {
+	p.score += p.currentScore()
 }
 
 func (p *Player) hasNonHeartCards() bool {
