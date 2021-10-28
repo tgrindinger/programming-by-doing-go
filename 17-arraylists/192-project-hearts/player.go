@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 )
@@ -86,4 +87,15 @@ func (p *Player) sortHand() {
 
 func (p *Player) resetTricks() {
 	p.tricks = []*Card{}
+}
+
+var ErrCardNotFound = errors.New("card not found")
+
+func (p *Player) findCard(card *Card) (int, error) {
+	for i, c := range p.hand {
+		if c.face == card.face && c.suit == card.suit {
+			return i, nil
+		}
+	}
+	return -1, ErrCardNotFound
 }

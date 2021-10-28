@@ -80,10 +80,9 @@ func (m *Match) dealCards() {
 
 func (m *Match) findFirstPlayer() (int, int) {
 	for i, p := range m.players {
-		for j, c := range p.hand {
-			if c.face == Two && c.suit == Clubs {
-				return i, j
-			}
+		index, err := p.findCard(&Card{Two, Clubs})
+		if err == nil {
+			return i, index
 		}
 	}
 	panic("Couldn't find Two of Clubs!!!")

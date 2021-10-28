@@ -225,3 +225,28 @@ func TestPlayerHasMatchingSuit(t *testing.T) {
 		})
 	}
 }
+
+func TestPlayerFindCard(t *testing.T) {
+	cases := []struct {
+		desc      string
+		hand      []*Card
+		card      *Card
+		wantIndex int
+		wantError error
+	}{
+		{ "found", []*Card{{Two, Clubs}}, &Card{Two, Clubs}, 0, nil },
+		{ "not found", []*Card{{Three, Clubs}}, &Card{Two, Clubs}, -1, ErrCardNotFound },
+	}
+	for _, tc := range cases {
+		t.Run(tc.desc, func(t *testing.T) {
+			player := &Player{tc.hand, nil, 0, 0}
+			got, err := player.findCard(tc.card)
+			if got != tc.wantIndex {
+				t.Errorf("got %d want %d", got, tc.wantIndex)
+			}
+			if err != tc.wantError {
+				t.Errorf("got %q want %q", err, tc.wantError)
+			}
+		})
+	}
+}
