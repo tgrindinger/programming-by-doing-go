@@ -12,7 +12,7 @@ import (
 
 func printTrick(writer io.Writer, match IMatch) {
 	fmt.Fprintln(writer, "Current trick:")
-	for _, card := range match.gameTrick() {
+	for _, card := range match.matchTrick() {
 		fmt.Fprintf(writer, "%s\n", card)
 	}
 	fmt.Fprintln(writer)
@@ -25,21 +25,21 @@ func printScores(writer io.Writer, game IGame) {
 	fmt.Fprintln(writer)
 }
 
-func readChoice(scanner *bufio.Scanner, writer io.Writer, match IMatch) int {
+func playTurn(scanner *bufio.Scanner, writer io.Writer, match IMatch) {
 	var choice int
-	for ok := true; ok; ok = !match.validPlay(choice - 1) {
+	var err error
+	for ok := true; ok; ok = err != nil {
 		fmt.Fprint(writer, "Discard which card: ")
 		scanner.Scan()
 		choice, _ = strconv.Atoi(scanner.Text())
-		if !match.validPlay(choice - 1) {
-			fmt.Fprintln(writer, "You are unable to play that card.")
-			fmt.Fprintln(writer, "You may only play cards of the same suit that has already been played.")
-			fmt.Fprintln(writer, "If you have no matching cards, you may play any other card.")
-			fmt.Fprintln(writer, "You may not break hearts as the first play unless you only have hearts.")
-			fmt.Fprintln(writer)
+		err = match.playCard(choice - 1)
+		switch err {
+		case ErrFirstPlay:     fmt.Fprintln(writer, "You cannot break hearts on the first play of a trick if you have any other suits in your hand.")
+		case ErrNextPlay:      fmt.Fprintln(writer, "You must play a card of the same suit as the first card of the trick.")
+		case ErrInvalidChoice: fmt.Fprintln(writer, "That's not a choice!")
 		}
+		fmt.Fprintln(writer)
 	}
-	return choice - 1
 }
 
 func playTrick(scanner *bufio.Scanner, writer io.Writer, match IMatch) {
@@ -47,8 +47,7 @@ func playTrick(scanner *bufio.Scanner, writer io.Writer, match IMatch) {
 		printTrick(writer, match)
 		fmt.Fprintf(writer, "Player %d, your move. Current score: %d\n", match.currentPlayer().index, match.currentPlayer().currentScore())
 		fmt.Fprintln(writer, match.currentPlayer().printHand())
-		choice := readChoice(scanner, writer, match)
-		match.playCard(choice)
+		playTurn(scanner, writer, match)
 		if match.trickOver() {
 			fmt.Fprintf(writer, "Player %d wins the trick!\n", match.trickWinner())
 			match.collectTrick()

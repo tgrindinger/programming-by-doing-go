@@ -7,6 +7,64 @@ import (
 	"testing"
 )
 
+func TestMatchMatchTrick(t *testing.T) {
+	d0 := &DiscardedCard{&Card{Ace, Spades}, 0}
+	d1 := &DiscardedCard{&Card{Two, Hearts}, 1}
+	d2 := &DiscardedCard{&Card{Three, Diamonds}, 2}
+	d3 := &DiscardedCard{&Card{Four, Clubs}, 3}
+	cases := []struct {
+		desc string
+		trick []*DiscardedCard
+	}{
+		{ "empty", []*DiscardedCard{} },
+		{ "single", []*DiscardedCard{d0} },
+		{ "two", []*DiscardedCard{d0, d1} },
+		{ "three", []*DiscardedCard{d0, d1, d2} },
+		{ "four", []*DiscardedCard{d0, d1, d2, d3} },
+	}
+	for _, tc := range cases {
+		t.Run(tc.desc, func(t *testing.T) {
+			match := &Match{nil, nil, tc.trick, 0, false}
+			got := match.matchTrick()
+			if len(got) != len(tc.trick) {
+				t.Errorf("len: got %v want %v", got, tc.trick)
+			} else {
+				for i := 0; i < len(got); i++ {
+					if got[i] != tc.trick[i] {
+						t.Errorf("contents: got %v want %v", got[i], tc.trick[i])
+					}
+				}
+			}
+		})
+	}
+}
+
+func TestMatchCurrentPlayer(t *testing.T) {
+	p0 := &Player{[]*Card{}, nil, 0, 0}
+	p1 := &Player{[]*Card{}, nil, 1, 0}
+	p2 := &Player{[]*Card{}, nil, 2, 0}
+	p3 := &Player{[]*Card{}, nil, 3, 0}
+	cases := []struct {
+		desc    string
+		current int
+		want    *Player
+	}{
+		{ "player 0", 0, p0 },
+		{ "player 1", 1, p1 },
+		{ "player 2", 2, p2 },
+		{ "player 3", 3, p3 },
+	}
+	for _, tc := range cases {
+		t.Run(tc.desc, func(t *testing.T) {
+			match := &Match{nil, []*Player{p0, p1, p2, p3}, nil, tc.current, false}
+			got := match.currentPlayer()
+			if got != tc.want {
+				t.Errorf("got %v want %v", got, tc.want)
+			}
+		})
+	}
+}
+
 func TestMatchDealCards(t *testing.T) {
 	random := rand.New(rand.NewSource(0))
 	match := &Match{random, []*Player{{[]*Card{}, nil, 0, 0}, {[]*Card{}, nil, 1, 0}, {[]*Card{}, nil, 2, 0}, {[]*Card{}, nil, 3, 0}}, nil, 0, false}
@@ -231,27 +289,30 @@ func TestMatchCollectTrick(t *testing.T) {
 	}
 }
 
-func TestValidPlay(t *testing.T) {
+func TestMatchValidPlay(t *testing.T) {
 	card0 := &Card{Ace, Spades}
 	card1 := &Card{Two, Hearts}
 	cases := []struct {
 		desc   string
+		choice int
 		trick  []*DiscardedCard
 		cards  []*Card
 		broken bool
-		want   bool
+		want   error
 	}{
-		{ "first unbroken non-heart", []*DiscardedCard{}, []*Card{card0}, false, true },
-		{ "first unbroken heart no alternatives", []*DiscardedCard{}, []*Card{card1}, false, true },
-		{ "first unbroken heart with alternatives", []*DiscardedCard{}, []*Card{card1, card0}, false, false },
-		{ "non-first unbroken non-heart", []*DiscardedCard{{card0, 1}}, []*Card{card0}, false, true },
-		{ "non-first unbroken heart no alternatives", []*DiscardedCard{{card0, 1}}, []*Card{card1}, false, true },
-		{ "non-first unbroken heart with alternatives", []*DiscardedCard{{card0, 1}}, []*Card{card1, card0}, false, false },
+		{ "first unbroken non-heart", 0, []*DiscardedCard{}, []*Card{card0}, false, nil },
+		{ "first unbroken heart no alternatives", 0, []*DiscardedCard{}, []*Card{card1}, false, nil },
+		{ "first unbroken heart with alternatives", 0, []*DiscardedCard{}, []*Card{card1, card0}, false, ErrFirstPlay },
+		{ "non-first unbroken non-heart", 0, []*DiscardedCard{{card0, 1}}, []*Card{card0}, false, nil },
+		{ "non-first unbroken heart no alternatives", 0, []*DiscardedCard{{card0, 1}}, []*Card{card1}, false, nil },
+		{ "non-first unbroken heart with alternatives", 0, []*DiscardedCard{{card0, 1}}, []*Card{card1, card0}, false, ErrNextPlay },
+		{ "invalid choice (negative)", -1, []*DiscardedCard{{card0, 1}}, []*Card{card1, card0}, false, ErrInvalidChoice },
+		{ "invalid choice (positive)", 2, []*DiscardedCard{{card0, 1}}, []*Card{card1, card0}, false, ErrInvalidChoice },
 	}
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
 			match := &Match{nil, []*Player{{tc.cards, nil, 0, 0}}, tc.trick, 0, tc.broken}
-			got := match.validPlay(0)
+			got := match.validPlay(tc.choice)
 			if got != tc.want {
 				t.Errorf("got %t want %t", got, tc.want)
 			}

@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	"errors"
 	"math/rand"
 )
 
@@ -9,12 +9,11 @@ type IMatch interface {
 	dealCards()
 	doFirstTurn()
 	matchOver() bool
-	playCard(card int)
+	playCard(card int) error
 	trickOver() bool
 	trickWinner() int
 	collectTrick()
-	gameTrick() []*DiscardedCard
-	validPlay(choice int) bool
+	matchTrick() []*DiscardedCard
 	currentPlayer() *Player
 }
 
@@ -26,20 +25,11 @@ type Match struct {
 	broken  bool
 }
 
-type DiscardedCard struct {
-	card   *Card
-	player int
-}
-
 func NewMatch(random *rand.Rand, players []*Player) IMatch {
 	return &Match{random, players, []*DiscardedCard{}, 0, false}
 }
 
-func (d *DiscardedCard) String() string {
-	return fmt.Sprintf("%d) %s", d.player, d.card)
-}
-
-func (m *Match) gameTrick() []*DiscardedCard {
+func (m *Match) matchTrick() []*DiscardedCard {
 	return m.trick
 }
 
@@ -139,23 +129,49 @@ func (m *Match) collectTrick() {
 	m.current = winner
 }
 
-func (m *Match) playCard(index int) {
+func (m *Match) playCard(index int) error {
+	err := m.validPlay(index)
+	if err != nil {
+		return err
+	}
 	card := m.players[m.current].playCard(index)
 	if card.suit == Hearts {
 		m.broken = true
 	}
 	m.trick = append(m.trick, &DiscardedCard{card, m.current})
 	m.nextPlayer()
+	return nil
 }
 
-func (m *Match) validFirstPlay(index int) bool {
-	return len(m.trick) == 0 && (m.players[m.current].hand[index].suit != Hearts || m.broken || !m.players[m.current].hasNonHeartCards())
+var ErrFirstPlay error = errors.New("invalid first play")
+var ErrNextPlay error = errors.New("invalid next play")
+var ErrInvalidChoice error = errors.New("invalid choice")
+
+func (m *Match) validFirstPlay(index int) error {
+	player := m.players[m.current]
+	if player.hand[index].suit == Hearts && !m.broken && player.hasNonHeartCards() {
+		return ErrFirstPlay
+	}
+	return nil
 }
 
-func (m *Match) validNextPlay(index int) bool {
-	return len(m.trick) > 0 && (m.trick[0].card.suit == m.players[m.current].hand[index].suit || !m.players[m.current].hasMatchingSuit(m.trick[0].card.suit))
+func (m *Match) validNextPlay(index int) error {
+	player := m.players[m.current]
+	if m.trick[0].card.suit != player.hand[index].suit && player.hasMatchingSuit(m.trick[0].card.suit) {
+		return ErrNextPlay
+	}
+	return nil
 }
 
-func (m *Match) validPlay(index int) bool {
-	return index < len(m.players[m.current].hand) && (m.validFirstPlay(index) || m.validNextPlay(index))
+func (m *Match) validPlay(index int) error {
+	if index < 0 || index >= len(m.players[m.current].hand) {
+		return ErrInvalidChoice
+	}
+	var err error
+	if len(m.trick) == 0 {
+		err = m.validFirstPlay(index)
+	} else {
+		err = m.validNextPlay(index)
+	}
+	return err
 }
